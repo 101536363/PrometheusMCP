@@ -50,6 +50,11 @@ class PrometheusMetadataInput(BaseModel):
     metric: str = Field(default="", description="Optional metric name filter")
 
 
+class PrometheusListMetricsInput(BaseModel):
+    url: str = Field(..., description="Prometheus URL (e.g., http://localhost:9090)")
+    limit: int = Field(default=10000, description="Maximum number of metrics to return")
+
+
 class AlertmanagerAlertsInput(BaseModel):
     url: str = Field(..., description="Alertmanager URL (e.g., http://localhost:9093)")
 
@@ -200,6 +205,27 @@ async def prometheus_get_metric_metadata(params: PrometheusMetadataInput) -> str
         client = PrometheusClient(params.url)
         metric = params.metric if params.metric else None
         result = await client.get_metric_metadata(metric)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return _handle_error(e)
+
+
+@mcp.tool()
+async def prometheus_list_metrics(params: PrometheusListMetricsInput) -> str:
+    """List all available metric names in Prometheus.
+
+    This tool discovers all metric names available in Prometheus.
+    Useful for exploring what metrics are available before writing queries.
+
+    Args:
+        params: Contains url and limit (max number of metrics)
+
+    Returns:
+        JSON string containing list of all available metric names.
+    """
+    try:
+        client = PrometheusClient(params.url)
+        result = await client.list_metrics(params.limit)
         return json.dumps(result, indent=2)
     except Exception as e:
         return _handle_error(e)

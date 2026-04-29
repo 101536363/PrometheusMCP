@@ -6,41 +6,114 @@ Model Context Protocol (MCP) Server for Prometheus metrics querying.
 
 - **直接 URL 查询** - 无需配置，直接通过 URL 查询任意 Prometheus/Alertmanager
 - **PromQL 查询** - 即时查询和范围查询
+- **指标发现** - 列出所有可用的指标名称
 - **Rules 查询** - 查看 Recording Rules 和 Alerting Rules
 - **Targets 监控** - 查看抓取目标健康状态
 - **Alertmanager** - 查询告警和 Silence 状态
 - **报表导出** - 支持 CSV/JSON 格式
 
-## 安装
+---
+
+## 环境要求
+
+| 项目 | 要求 |
+|------|------|
+| Python | 3.10 - 3.14 |
+| pip | 最新版 |
+
+### 检查 Python 版本
 
 ```bash
-pip install -e .
+python3 --version
+# 应显示 Python 3.10.x 或更高
 ```
 
-## 卸载
+---
+
+## 部署方式 A: 本机安装（pip）
+
+### 1. 克隆代码
 
 ```bash
-pip uninstall prometheus-mcp
+git clone <repo-url>
+cd prometheus-mcp
 ```
 
-## 配置
+### 2. 安装
 
-无需配置！直接通过 URL 查询。
+```bash
+pip3 install -e .
+```
 
-在 OpenCode 的 MCP 配置中添加：
+### 3. 验证安装
+
+```bash
+python3 -m prometheus_mcp
+# 无输出表示正常运行（按 Ctrl+C 停止）
+```
+
+### 4. 卸载
+
+```bash
+pip3 uninstall prometheus-mcp
+```
+
+---
+
+## 部署方式 B: Docker
+
+### 前置条件
+
+- Docker 已安装
+
+### 1. 克隆代码
+
+```bash
+git clone <repo-url>
+cd prometheus-mcp
+```
+
+### 2. 构建镜像（不启动）
+
+```bash
+docker build -t prometheus-mcp .
+```
+
+### 3. 运行（可选）
+
+```bash
+docker run prometheus-mcp
+```
+
+---
+
+## OpenCode 配置
+
+在 OpenCode 的配置文件中添加：
 
 ```json
 {
-  "mcpServers": {
+  "mcp": {
     "prometheus": {
-      "command": "python",
-      "args": ["-m", "prometheus_mcp"]
+      "type": "local",
+      "command": ["/Library/Frameworks/Python.framework/Versions/3.14/bin/python3", "-m", "prometheus_mcp"],
+      "enabled": true
     }
   }
 }
 ```
 
-## 可用工具
+**注意**：将 `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3` 替换为你的 Python 路径。
+
+### 检查 Python 路径
+
+```bash
+which python3
+```
+
+---
+
+## 可用工具（共 9 个）
 
 ### Prometheus 查询
 
@@ -48,6 +121,7 @@ pip uninstall prometheus-mcp
 |------|------|
 | `prometheus_query` | PromQL 即时查询 |
 | `prometheus_query_range` | PromQL 范围查询 |
+| `prometheus_list_metrics` | 列出所有可用指标 |
 | `prometheus_get_targets` | 获取 Targets 状态 |
 | `prometheus_get_rules` | 获取所有 Rules |
 | `prometheus_get_metric_metadata` | 获取指标元数据 |
@@ -59,6 +133,8 @@ pip uninstall prometheus-mcp
 |------|------|
 | `alertmanager_get_alerts` | 获取当前告警 |
 | `alertmanager_get_silences` | 获取 Silence 列表 |
+
+---
 
 ## 使用示例
 
@@ -79,6 +155,9 @@ prometheus_query_range(
     end="2024-01-02T00:00:00Z",
     step="1m"
 )
+
+# 列出所有指标
+prometheus_list_metrics(url="http://localhost:9090")
 
 # 获取 Targets
 prometheus_get_targets(url="http://localhost:9090")
@@ -119,6 +198,8 @@ prometheus_export_report(
 )
 ```
 
+---
+
 ## 常见查询示例
 
 | 需求 | PromQL |
@@ -129,11 +210,19 @@ prometheus_export_report(
 | 列出所有 Pod | `count by (pod) (kube_pod_info)` |
 | 列出所有 Node | `count by (node) (kube_node_info)` |
 
+---
+
 ## 开发
 
 ```bash
+# 安装开发依赖
 pip install -e ".[dev]"
+
+# 运行测试
+pytest
 ```
+
+---
 
 ## 许可证
 

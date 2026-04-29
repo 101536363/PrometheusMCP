@@ -84,6 +84,17 @@ class PrometheusClient:
             response.raise_for_status()
             return response.json()
 
+    async def list_metrics(self, limit: int = 10000) -> dict:
+        """List all available metric names."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/api/v1/label/__name__/values",
+                params={"limit": limit},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+
 
 class AlertmanagerClient:
     """HTTP client for Alertmanager API."""
