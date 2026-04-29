@@ -1,11 +1,11 @@
 # Prometheus MCP
 
-Model Context Protocol (MCP) Server for Prometheus metrics querying and management.
+Model Context Protocol (MCP) Server for Prometheus metrics querying.
 
 ## 功能
 
-- **多实例管理** - 通过 YAML 配置管理多个 Prometheus/Alertmanager 实例
-- **指标查询** - PromQL 即时查询和范围查询
+- **直接 URL 查询** - 无需配置，直接通过 URL 查询任意 Prometheus/Alertmanager
+- **PromQL 查询** - 即时查询和范围查询
 - **Rules 查询** - 查看 Recording Rules 和 Alerting Rules
 - **Targets 监控** - 查看抓取目标健康状态
 - **Alertmanager** - 查询告警和 Silence 状态
@@ -17,25 +17,15 @@ Model Context Protocol (MCP) Server for Prometheus metrics querying and manageme
 pip install -e .
 ```
 
-## 配置
+## 卸载
 
-创建 `instances.yaml` 文件：
-
-```yaml
-prometheus:
-  - name: prod
-    url: http://prometheus:9090
-  - name: dev
-    url: http://dev-prometheus:9090
-
-alertmanager:
-  - name: prod-am
-    url: http://alertmanager:9093
+```bash
+pip uninstall prometheus-mcp
 ```
 
-## 使用方法
+## 配置
 
-### OpenCode 配置
+无需配置！直接通过 URL 查询。
 
 在 OpenCode 的 MCP 配置中添加：
 
@@ -44,49 +34,84 @@ alertmanager:
   "mcpServers": {
     "prometheus": {
       "command": "python",
-      "args": ["-m", "prometheus_mcp"],
-      "env": {
-        "PROMETHEUS_CONFIG": "./instances.yaml"
-      }
+      "args": ["-m", "prometheus_mcp"]
     }
   }
 }
 ```
 
-### 可用工具
+## 可用工具
+
+### Prometheus 查询
 
 | 工具 | 说明 |
 |------|------|
-| `prometheus_list_instances` | 列出所有 Prometheus 实例 |
-| `alertmanager_list_instances` | 列出所有 Alertmanager 实例 |
-| `prometheus_add_instance` | 添加新实例 |
-| `prometheus_remove_instance` | 删除实例 |
 | `prometheus_query` | PromQL 即时查询 |
 | `prometheus_query_range` | PromQL 范围查询 |
 | `prometheus_get_targets` | 获取 Targets 状态 |
 | `prometheus_get_rules` | 获取所有 Rules |
 | `prometheus_get_metric_metadata` | 获取指标元数据 |
-| `alertmanager_get_alerts` | 获取当前告警 |
-| `alertmanager_get_silences` | 获取 Silence 列表 |
-| `alertmanager_get_status` | 获取 Alertmanager 状态 |
 | `prometheus_export_report` | 导出报表 (CSV/JSON) |
 
-### 示例查询
+### Alertmanager 查询
+
+| 工具 | 说明 |
+|------|------|
+| `alertmanager_get_alerts` | 获取当前告警 |
+| `alertmanager_get_silences` | 获取 Silence 列表 |
+
+## 使用示例
+
+### 查询 Prometheus
 
 ```python
 # 查询 up 指标
-prometheus_query(query="up{job='kubernetes-nodes'}")
+prometheus_query(
+    url="http://localhost:9090",
+    query="up{job='kubernetes-nodes'}"
+)
 
 # 范围查询
 prometheus_query_range(
+    url="http://localhost:9090",
     query="rate(node_cpu_seconds_total[5m])",
     start="2024-01-01T00:00:00Z",
     end="2024-01-02T00:00:00Z",
     step="1m"
 )
 
-# 导出报表
+# 获取 Targets
+prometheus_get_targets(url="http://localhost:9090")
+
+# 获取 Rules
+prometheus_get_rules(url="http://localhost:9090")
+```
+
+### 查询 Alertmanager
+
+```python
+# 获取当前告警
+alertmanager_get_alerts(url="http://localhost:9093")
+
+# 获取 Silences
+alertmanager_get_silences(url="http://localhost:9093")
+```
+
+### 导出报表
+
+```python
+# 导出 JSON
 prometheus_export_report(
+    url="http://localhost:9090",
+    query="up",
+    start="2024-01-01T00:00:00Z",
+    end="2024-01-02T00:00:00Z",
+    format="json"
+)
+
+# 导出 CSV
+prometheus_export_report(
+    url="http://localhost:9090",
     query="up",
     start="2024-01-01T00:00:00Z",
     end="2024-01-02T00:00:00Z",
@@ -94,14 +119,20 @@ prometheus_export_report(
 )
 ```
 
+## 常见查询示例
+
+| 需求 | PromQL |
+|------|--------|
+| 所有 Pod CPU 排名 | `topk(10, sum by (pod) (rate(container_cpu_usage_seconds_total[5m])))` |
+| 所有 Node 内存 | `topk(10, sort_desc(node_memory_MemAvailable_bytes))` |
+| Namespace 资源排名 | `topk(10, sum by (namespace) (container_memory_usage_bytes))` |
+| 列出所有 Pod | `count by (pod) (kube_pod_info)` |
+| 列出所有 Node | `count by (node) (kube_node_info)` |
+
 ## 开发
 
 ```bash
-# 安装开发依赖
 pip install -e ".[dev]"
-
-# 运行测试
-pytest
 ```
 
 ## 许可证
