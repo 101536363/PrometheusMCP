@@ -7,6 +7,7 @@ A Model Context Protocol server for Prometheus metrics querying.
 import json
 import csv
 import io
+import httpx
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
