@@ -10,8 +10,8 @@ WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --user --no-cache-dir -e .
 
-# 阶段2：运行时镜像（使用 alpine 减小体积）
-FROM python:3.14-alpine
+# 阶段2：运行时镜像（使用 slim）
+FROM python:3.14-slim
 
 WORKDIR /app
 
