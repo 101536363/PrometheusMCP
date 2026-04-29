@@ -1,0 +1,7 @@
+prometheus:
+  - name: local
+    url: http://localhost:9090
+
+alertmanager:
+  - name: local
+    url: http://localhost:9093
