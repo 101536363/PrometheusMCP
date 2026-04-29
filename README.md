@@ -58,38 +58,7 @@ python3 -m prometheus_mcp
 pip3 uninstall prometheus-mcp
 ```
 
----
-
-## 部署方式 B: Docker
-
-### 前置条件
-
-- Docker 已安装
-
-### 1. 克隆代码
-
-```bash
-git clone <repo-url>
-cd prometheus-mcp
-```
-
-### 2. 构建镜像（不启动）
-
-```bash
-docker build -t prometheus-mcp .
-```
-
-### 3. 运行（可选）
-
-```bash
-docker run prometheus-mcp
-```
-
----
-
-## OpenCode 配置
-
-在 OpenCode 的配置文件中添加：
+OpenCode 配置
 
 ```json
 {
@@ -105,11 +74,90 @@ docker run prometheus-mcp
 
 **注意**：将 `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3` 替换为你的 Python 路径。
 
-### 检查 Python 路径
+
+
+---
+
+## 部署方式 B: Docker
+
+### 前置条件
+
+- Docker 已安装
+
+### 方式 1: 直接使用预构建镜像（推荐）
 
 ```bash
-which python3
+docker run -d --name prometheus-mcp 101536363/prometheus_mcp:latest
 ```
+
+OpenCode 配置：
+```json
+{
+  "mcp": {
+    "prometheus": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "101536363/prometheus_mcp:latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+### 方式 2: 自行构建镜像
+
+```bash
+git clone <repo-url>
+cd prometheus-mcp
+docker build -t prometheus-mcp .
+```
+
+OpenCode 配置：
+```json
+{
+  "mcp": {
+    "prometheus": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "prometheus-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+---
+
+## 方式 3: kubectl proxy 场景配置
+
+当你使用 `kubectl port-forward` 将 K8s 集群内的 Prometheus 端口映射到本地时，Docker 容器无法直接访问 `localhost:9090`。需要使用以下配置：
+
+```json
+{
+  "mcp": {
+    "prometheus": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "--add-host=host.docker.internal:host-gateway", "101536363/prometheus_mcp:latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+### 原理说明
+
+| 地址 | 含义 |
+|------|------|
+| `localhost:9090` | Docker 容器内部的 localhost（访问不到宿主机） |
+| `host.docker.internal:9090` | 宿主机（macOS/Windows）的 localhost |
+
+`--add-host=host.docker.internal:host-gateway` 让容器内可以解析到宿主机的 IP，从而访问宿主机上 kubectl port-forward 映射的 Prometheus。
+
+### 使用方式
+
+配置完成后，查询时指定 `host.docker.internal:9090` 作为 URL：
+
+> "用 host.docker.internal:9090 查询 up"
+
+> 注意：`host.docker.internal` 仅支持 Docker Desktop for Mac/Windows。Linux 用户请使用 [方案 B（二进制安装）](#部署方式-a-本机安装pip)。
 
 ---
 
@@ -164,6 +212,21 @@ prometheus_get_targets(url="http://localhost:9090")
 
 # 获取 Rules
 prometheus_get_rules(url="http://localhost:9090")
+```
+
+### kubectl proxy 场景查询
+
+当你通过 kubectl port-forward 访问 Prometheus 时：
+
+```python
+# 查询 up 指标
+prometheus_query(
+    url="http://host.docker.internal:9090",
+    query="up{job='MyHomeLab-SerV'}"
+)
+
+# 获取告警规则
+prometheus_get_rules(url="http://host.docker.internal:9090")
 ```
 
 ### 查询 Alertmanager
